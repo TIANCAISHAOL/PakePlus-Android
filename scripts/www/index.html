@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="author" content="Bemuse">
+<meta name="description" content="Arknights Wallpaper">
+<meta name="keywords" content="html, css, js, vue.js, three.js">
+<title>泰拉身份备案</title>
+<!-- 壁纸依赖样式 -->
+<link href="css/style.css" rel="stylesheet" type="text/css"/>
+<style>
+*{margin:0;padding:0;font-family:微软雅黑;box-sizing:border-box;}
+body{
+    min-height:100vh;
+    overflow:hidden;
+}
+
+/* 顶部加载遮罩（淡金色文字+三点动画，3秒消失） */
+#mask-layer{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.65);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #E6C260; /* 淡金色文字 */
+    font-size: 24px;
+    letter-spacing: 2px;
+    transition: opacity 0.6s ease;
+}
+.line1{margin-bottom: 18px;}
+#dot{display: inline-block;}
+#mask-layer.fade-out{
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 悬浮在壁纸上的备案表单，无独立背景，全部文字淡金色 */
+.form-box{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    width: 420px;
+    padding: 30px;
+    z-index: 999;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid #E6C26077;
+    border-radius: 10px;
+    color:#E6C260; /* 表单整体淡金色文字 */
+}
+.form-box h2{
+    color:#E6C260;
+    margin-bottom:22px;
+    text-align:center;
+    font-size:22px;
+}
+.item{margin:16px 0;}
+label{
+    display:block;
+    margin-bottom:6px;
+    color:#E6C260;
+}
+input,select,textarea{
+    width:100%;
+    padding:10px;
+    background:#171717cc;
+    border:1px solid #E6C26066;
+    color:#E6C260;
+    border-radius:4px;
+    font-size:15px;
+}
+textarea{resize:none;}
+button{
+    width:100%;
+    padding:12px;
+    margin-top:20px;
+    background:#E6C260;
+    color:#000;
+    border:none;
+    border-radius:4px;
+    font-size:16px;
+    cursor:pointer;
+}
+button:hover{opacity:0.9;}
+
+/* 隐藏音频元素（不影响页面布局） */
+#audio-player {
+    display: none;
+}
+</style>
+</head>
+<body>
+<!-- 1. 添加音频播放标签 -->
+<audio id="audio-player" src="img/DAY.mp3" loop></audio>
+
+<!-- 3秒加载遮罩层（文字已修改为载入中ing...） -->
+<div id="mask-layer">
+    <div class="line1">载入中ing...<span id="dot"></span></div>
+    <div>正在加载泰拉网络</div>
+</div>
+
+<!-- 底层完整壁纸主体 -->
+<div id="wrap">
+    <transition name="opening-hide">
+        <div id="opening" v-show="shows.opening">
+            <div id="loading-wrap">
+                <div id="loading-bar">
+                    <div :style="styles.loading.div"></div>
+                    <div :style="styles.loading.div"></div>
+                </div>
+                <div id="loading-percentage">
+                    <span :style="styles.loading.span.a">{{loading.progress}}%</span>
+                    <span :style="styles.loading.span.b">{{loading.progress}}%</span>
+                    <span :style="styles.loading.span.c">{{loading.complete}}</span>
+                </div>
+            </div>
+        </div>
+    </transition>
+    <div id="main">
+        <div id="background-wrap">
+            <div id="background-frame">
+                <div :style="styles.background.frame"></div>
+            </div>
+            <div id="background-image">
+                <div :style="styles.background.image"></div>
+                <video v-show="shows.video" ref="videobg" src="" muted loop id="background-video"></video>
+            </div>
+            <div id="background-cross">
+                <div v-for="cross in arrays.cross" :key="cross.id"></div>
+            </div>
+            <div id="background-square" @mousemove="mouseMove">
+                <div v-for="square in arrays.square" :key="square.id"></div>
+            </div>
+        </div>
+        <div id="app-wrap">
+            <div id="app-transform" :style="clockTrans">
+                <div class="app line">
+                    <div id="line-title"><span>CRT TIME</span></div>
+                    <div id="line-graph">
+                        <div id="line-graph-hour">
+                            <div></div>
+                            <div :style="lineHourWidth"></div>
+                            <span>{{'0.'+(time.hour < 10 ? '0'+time.hour : time.hour)}}</span>
+                        </div>
+                        <div id="line-graph-min">
+                            <div></div>
+                            <div :style="lineMinuteWidth"></div>
+                            <span>{{'0.'+(time.min < 10 ? '0'+time.min : time.min)}}</span>
+                        </div>
+                        <div id="line-graph-sec">
+                            <div></div>
+                            <div :style="lineSecondWidth"></div>
+                            <span>{{'0.'+(time.sec < 10 ? '0'+time.sec : time.sec)}}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="app date">
+                    <div class="side-circle" id="date-wrap">
+                        <div></div><div></div>
+                        <div><span>{{displayFullDate}}</span></div>
+                    </div>
+                </div>
+                <div class="app time">
+                    <div class="side-circle" id="time-wrap">
+                        <div></div><div></div>
+                        <div><span>{{displayFullTime}}</span></div>
+                    </div>
+                </div>
+                <div class="app uptime">
+                    <div class="side-circle" id="uptime-wrap">
+                        <div></div><div></div>
+                        <div><span>{{displayUptime}}</span></div>
+                    </div>
+                </div>
+                <div class="app day">
+                    <div class="side-circle" id="day-wrap">
+                        <div></div><div></div>
+                        <div><span>{{displayDay}}</span></div>
+                    </div>
+                </div>
+                <div class="app clock">
+                    <div id="clock-second">
+                        <div v-for="second in arrays.clock.second" :key="second.id">
+                            <div :style="second.style.trans">
+                                <span :style="second.style.font">{{second.text}}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="clock-minute">
+                        <div v-for="minute in arrays.clock.minute" :key="minute.id">
+                            <div :style="minute.style.trans">
+                                <span :style="minute.style.font">{{minute.text}}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="clock-hour">
+                        <div v-for="hour in arrays.clock.hour" :key="hour.id">
+                            <div :style="hour.style.trans">
+                                <span :style="hour.style.font">{{hour.text}}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="clock-circle">
+                        <div v-for="circle in arrays.clock.circles" :key="circle.id"><div></div></div>
+                    </div>
+                    <div id="clock-logo-trans">
+                        <div v-for="rect in arrays.clock.rects" :key="rect.id" :style="rect.style.one">
+                            <div :style="rect.style.two"><div :style="rect.style.three"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="end">
+            <div id="change-bg" @click="displayOverlay"><div></div></div>
+            <transition name="overlay-hide">
+                <div id="overlay" v-show="shows.overlay" @click="hideOverlay">
+                    <div id="overlay-wrap">
+                        <div id="overlay-image">
+                            <div @click="changeBG(true, 0)"></div>
+                            <div @click="changeBG(true, 1)"></div>
+                        </div>
+                        <div id="overlay-video">
+                            <div @click="changeBG(false, 0)"></div>
+                            <div @click="changeBG(false, 1)"></div>
+                            <div @click="changeBG(false, 2)"></div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </div>
+    </div>
+</div>
+
+<!-- 悬浮在壁纸上层的备案表单（全文字淡金色） -->
+<div class="form-box">
+    <h2>泰拉身份备案登记表</h2>
+    <div class="item">
+        <label>个人代号（必填）</label>
+        <input type="text" id="name" placeholder="填写你的称呼">
+    </div>
+    <div class="item">
+        <label>性别（必填）</label>
+        <select id="gender">
+            <option value=""></option>
+            <option>男</option>
+            <option>女</option>
+            <option>不便透露</option>
+        </select>
+    </div>
+    <div class="item">
+        <label>喜好类型（必填）</label>
+        <select id="camp">
+            <option value=""></option>
+            <option>龙</option>
+            <option>麒麟</option>
+            <option>羽翼类</option>
+            <option>企鹅类</option>
+            <option>狼类</option>
+            <option>天使</option>
+            <option>恶魔</option>
+            <option>猫型亚目</option>
+            <option>精灵</option>
+            <option>水生生物</option>
+            <option>兔</option>
+            <option>熊</option>
+            <option>其他</option>
+        </select>
+    </div>
+    <div class="item">
+        <label>自愿登记（必填）</label>
+        <select id="camp2">
+            <option value=""></option>
+            <option>是自愿的！</option>
+            <option>不自愿你下载什么？</option>
+        </select>
+    </div>
+    <div class="item">
+        <label>故乡（选填）</label>
+        <input type="text" id="star" placeholder="例：罗德岛">
+    </div>
+    <div class="item">
+        <label>简短自述</label>
+        <textarea id="msg" rows="3" placeholder="简单介绍自己"></textarea>
+    </div>
+    <button onclick="submitForm()">提交身份备案</button>
+</div>
+
+<!-- JS脚本 -->
+<script src="js/vue.min.js"></script>
+<script src="js/throttle.js"></script>
+<script src="js/main.js"></script>
+<script>
+// 加载遮罩三点动画
+const dot = document.getElementById('dot');
+const dotList = ['', '.', '..', '...'];
+let idx = 0;
+function dotAnimate(){
+    idx = (idx + 1) % dotList.length;
+    dot.innerText = dotList[idx];
+}
+setInterval(dotAnimate, 320);
+
+// 3秒淡出遮罩
+setTimeout(()=>{
+    document.getElementById('mask-layer').classList.add('fade-out');
+},3000);
+
+// 2. 页面加载后自动播放音频
+window.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.getElementById('audio-player');
+    // 解决浏览器自动播放策略限制（用户交互后播放）
+    function playAudio() {
+        audioPlayer.play().catch(err => {
+            console.log('音频自动播放失败，需用户交互后播放:', err);
+            // 监听用户首次点击/触摸事件，触发播放
+            document.addEventListener('click', function playOnClick() {
+                audioPlayer.play();
+                document.removeEventListener('click', playOnClick);
+            }, { once: true });
+        });
+    }
+    playAudio();
+});
+
+// 表单提交逻辑
+function submitForm(){
+    // 获取表单值
+    let name = document.getElementById('name').value.trim();
+    let gender = document.getElementById('gender').value.trim();
+    let camp = document.getElementById('camp').value.trim();
+    let camp2 = document.getElementById('camp2').value.trim();
+    
+    // 验证个人代号
+    if(!name){
+        alert("请填写代号再提交备案！");
+        return;
+    }
+    
+    // 验证性别
+    if(!gender){
+        alert("请选择性别！");
+        return;
+    }
+    
+    // 验证喜好类型
+    if(!camp){
+        alert("请选择喜好类型！");
+        return;
+    }
+    
+    // 验证自愿登记
+    if(!camp2){
+        alert("请选择是否自愿登记！");
+        return;
+    }
+    if(camp2 !== "是自愿的！"){
+        alert("必须确认是自愿登记才能提交备案！");
+        return;
+    }
+
+    // 所有验证通过，跳转页面
+    location.href = "loading.html";
+}
+</script>
+</body>
+</html>
