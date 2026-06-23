@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>备案加载中</title>
+<style>
+*{margin:0;padding:0;font-family:微软雅黑}
+body{
+/* 单独调用加载页背景图 */
+background: url("img/bg.png");
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+background-attachment: fixed;
+min-height:100vh;
+/* 黑色半透明蒙版，保证文字看清 */
+background-color: rgba(0,0,0,0.7);
+background-blend-mode: multiply;
+/* 改为淡金色文字 */
+color:#f5e7b8;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+font-size:20px;
+}
+/* 文本容器添加淡出淡入动画 */
+.text-container {
+  text-align: center;
+  /* 动画：名称 时长 线性 无限循环 */
+  animation: fadeInOut 2s linear infinite;
+}
+.load-text{margin-bottom:15px;}
+
+/* 定义淡出淡入动画 */
+@keyframes fadeInOut {
+  0% { opacity: 0.2; }  /* 初始透明度 */
+  50% { opacity: 1; }   /* 中间完全显示 */
+  100% { opacity: 0.2; }/* 回到初始透明度 */
+}
+</style>
+</head>
+<body>
+<!-- 新增文本容器包裹所有文字 -->
+<div class="text-container">
+  <div class="load-text">身份备案中，请稍后<span id="dot"></span></div>
+  <div>正在接入泰拉星区网络</div>
+</div>
+
+<script>
+let dotDom = document.getElementById('dot');
+let dotArr = ['', '.', '..', '...'];
+let index = 0;
+function showDot(){
+index = (index + 1) % dotArr.length;
+dotDom.innerText = dotArr[index];
+}
+// 每个点浮现间隔：350毫秒
+setInterval(showDot, 350);
+
+// 总等待2.5秒跳转欢迎页
+setTimeout(function(){
+location.href="welcome.html";
+},2500);
+</script>
+</body>
+</html>
